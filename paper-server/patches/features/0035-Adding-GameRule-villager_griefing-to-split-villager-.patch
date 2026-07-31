@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BuildTools <unconfigured@null.spigotmc.org>
+Date: Fri, 31 Jul 2026 20:17:15 +0200
+Subject: [PATCH] Adding GameRule villager_griefing to split villager stuff
+ from mob grief stuff
+
+
+diff --git a/net/minecraft/world/entity/Mob.java b/net/minecraft/world/entity/Mob.java
+index c2dd2da4bfb7d65ad2730ba1ce771e2b488beda4..8c7ce6a4248dc827d49a5012088413cbce973421 100644
+--- a/net/minecraft/world/entity/Mob.java
++++ b/net/minecraft/world/entity/Mob.java
+@@ -522,6 +522,11 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
+         this.resetAngularLeashMomentum();
+     }
+ 
++    protected Boolean canGrief() {
++        return this.level() instanceof ServerLevel serverLevel
++        && serverLevel.getGameRules().get(GameRules.MOB_GRIEFING);
++    }
++
+     @Override
+     public void aiStep() {
+         super.aiStep();
+@@ -535,7 +540,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
+             && this.canPickUpLoot()
+             && this.isAlive()
+             && !this.dead
+-            && serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
++            && this.canGrief()) {
+             Vec3i pickupReach = this.getPickupReach();
+ 
+             for (ItemEntity entity : this.level()
+diff --git a/net/minecraft/world/entity/ai/behavior/HarvestFarmland.java b/net/minecraft/world/entity/ai/behavior/HarvestFarmland.java
+index 5a0d0d1c145c303930769ea27f81d91337a3f1bf..6c4657ff09f19e499f8f75e834af999888d0a86d 100644
+--- a/net/minecraft/world/entity/ai/behavior/HarvestFarmland.java
++++ b/net/minecraft/world/entity/ai/behavior/HarvestFarmland.java
+@@ -47,7 +47,7 @@ public class HarvestFarmland extends Behavior<Villager> {
+ 
+     @Override
+     protected boolean checkExtraStartConditions(final ServerLevel level, final Villager body) {
+-        if (!level.getGameRules().get(GameRules.MOB_GRIEFING)) {
++        if (!level.getGameRules().get(GameRules.VILLAGER_GRIEFING)) {
+             return false;
+         }
+ 
+diff --git a/net/minecraft/world/entity/npc/villager/AbstractVillager.java b/net/minecraft/world/entity/npc/villager/AbstractVillager.java
+index 07aa7fae79edff4c92b8f153659f16b9769c80ff..2df884a24304a5d96e0724c7710e87d3c4421f75 100644
+--- a/net/minecraft/world/entity/npc/villager/AbstractVillager.java
++++ b/net/minecraft/world/entity/npc/villager/AbstractVillager.java
+@@ -39,6 +39,7 @@ import net.minecraft.world.item.trading.MerchantOffers;
+ import net.minecraft.world.item.trading.TradeSet;
+ import net.minecraft.world.item.trading.VillagerTrade;
+ import net.minecraft.world.level.Level;
++import net.minecraft.world.level.gamerules.GameRules;
+ import net.minecraft.world.level.ServerLevelAccessor;
+ import net.minecraft.world.level.pathfinder.PathType;
+ import net.minecraft.world.level.portal.TeleportTransition;
+@@ -355,4 +356,10 @@ public abstract class AbstractVillager extends AgeableMob implements Npc, Mercha
+     public boolean stillValid(final Player player) {
+         return this.getTradingPlayer() == player && this.isAlive() && player.isWithinEntityInteractionRange(this, 4.0);
+     }
++
++    @Override
++    protected Boolean canGrief() {
++        return this.level() instanceof ServerLevel serverLevel
++        && serverLevel.getGameRules().get(GameRules.VILLAGER_GRIEFING);
++    }
+ }
+diff --git a/net/minecraft/world/level/gamerules/GameRules.java b/net/minecraft/world/level/gamerules/GameRules.java
+index 49801f8b037913de5896d4e31a1e36d7ce597875..641b67a6666e4da13cfd3fcd7e65374eceb0421f 100644
+--- a/net/minecraft/world/level/gamerules/GameRules.java
++++ b/net/minecraft/world/level/gamerules/GameRules.java
+@@ -59,6 +59,7 @@ public class GameRules {
+     public static final GameRule<Boolean> MOB_DROPS = registerBoolean("mob_drops", GameRuleCategory.DROPS, true);
+     public static final GameRule<Boolean> MOB_EXPLOSION_DROP_DECAY = registerBoolean("mob_explosion_drop_decay", GameRuleCategory.DROPS, true);
+     public static final GameRule<Boolean> MOB_GRIEFING = registerBoolean("mob_griefing", GameRuleCategory.MOBS, true);
++    public static final GameRule<Boolean> VILLAGER_GRIEFING = registerBoolean("villager_griefing", GameRuleCategory.MOBS, true);
+     public static final GameRule<Boolean> NATURAL_HEALTH_REGENERATION = registerBoolean("natural_health_regeneration", GameRuleCategory.PLAYER, true);
+     public static final GameRule<Boolean> PLAYER_MOVEMENT_CHECK = registerBoolean("player_movement_check", GameRuleCategory.PLAYER, true);
+     public static final GameRule<Integer> PLAYERS_NETHER_PORTAL_CREATIVE_DELAY = registerInteger(
